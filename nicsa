@@ -1,0 +1,500 @@
+#!/usr/bin/env python
+# encoding: UTF-8
+# please change the first line to #!/usr/bin/env python3 if you deployed a Python3 environment
+# dependencies: python >= 2.7, matplotlib >= 1.3
+
+# Backwards compatibility
+from __future__ import print_function
+if hasattr(__builtins__, 'raw_input'): input = raw_input
+
+# <block1><!--definitions-->
+ATOMS = {'B': (192, (1., .710, .710, 1.)), 'C': (170, (.467, .467, .467, 1.)),
+'N': (155, (.631, .631, 1., 1.)), 'O': (152, (.796, 0., 0., 1.)),
+'F': (147, (.776, 1., .071, 1.)), 'AL': (184, (.812, .651, .651, 1.)),
+'SI': (210, (.820, .839, .549, 1.)), 'P': (180, (1., .580, .129, 1.)),
+'S': (180, (.796, .208, 1., 1.)), 'CL': (175, (.267, 1., .227, 1.)),
+'GA': (187, (.761, .561, .561, 1.)), 'GE': (211, (.400, .561, .561, 1.)),
+'AS': (185, (.741, .502, .890, 1.)), 'SE': (190, (1., .631, 0., 1.)),
+'BR': (185, (.745, .501, .235, 1.)), 'SN': (217, (.400, .502, .502, 1.)),
+'SB': (206, (.620, .388, .710, 1.)), 'TE': (206, (.831, .478, 0., 1.)),
+'I': (198, (.600, .600, 1., 1.)), 'BI': (207, (.620, .310, .710, 1.)),
+'OTHER': (170, (1., 0., 1., 1.)), 'BQ': (120, (.081, .311, .537, 1.)), 'highlight': (0, .75, 0, 1)} # vdw radii (in pm) and colors
+BOND_LIMIT = 1.8 # the maximum distance (in anstrom) between atoms for a bond to be considered as "existing"
+COMPONENTS = [True, True, True, True, True] # set which component(s) to be visible: Bonds, Labels, Planes, H's, Bq's
+COMMAND = '# nmr=giao b3lyp/6-311+g(2d,p)' # Gaussian keywords of a NICS calculation
+
+import os
+import sys
+import random
+import threading
+import matplotlib.pyplot as plt
+from matplotlib import __version__
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.widgets import CheckButtons
+
+import warnings
+warnings.filterwarnings('ignore')
+if int(__version__[0]) >= 3: # in latest matplotlib (>= 3.0), warning messages will be printed when 'c' (color) is not `np.array'
+  from matplotlib.axes._axes import _log
+  _log.setLevel('ERROR') # suppress warning messages
+
+def flush_events(): # flush GUI events to prevent freezing
+  import time
+  try: fig.canvas.flush_events(); time.sleep(0.01)
+  except: plt.pause(0.01)
+
+def checkStates(index): # for lower versions, cannot get the value of checkboxes
+  if hasattr(CheckButtons, 'get_status'): return checkBox.get_status()[index]
+  else: return checkBox.lines[index][0].get_visible() # workaround provided by: https://stackoverflow.com/a/45076549/
+
+def atom_prop(name, prop=0):
+  if name.upper() not in ATOMS.keys(): name = 'other'
+  if prop == 0: return ATOMS[name.upper()][0]-85 # radius
+  else: return ATOMS[name.upper()][1] # color
+
+# for Windows, input() will block GUI events processing, freezing the figure window (not responding)
+# a distinct thread is created for input() to avoid the issue
+# https://github.com/matplotlib/matplotlib/issues/9206
+# https://stackoverflow.com/a/34957174/
+def input_return():
+  global response; response = input()
+def input2(prompt):
+  print(prompt, end='')
+  th = threading.Thread(target=input_return)
+  th.start()
+  while th.isAlive():
+    if plt.fignum_exists(1): flush_events()
+  return response
+if os.name != 'nt':
+  input2 = input # for unix, fallback to original input method
+
+if os.name == 'nt': os.system('title NICS_Automator v1.01 by Z. Sun'); print() # windows
+else: # unix
+#  if sys.version_info.major < 3:
+#    if not os.system('which python3 1>/dev/null 2>&1'):
+#      os.system('python3 "' + '" "'.join(sys.argv) + '"'); os._exit(0) # prefer python3 to python2
+  print('\033]0;NICS_Automator v1.01 by Z. Sun\a')
+
+print('Usage: This tool is designed to automatically create an Gaussian input file eligible for NICS(0) and NICS(1) calculations based on the initial .gjf file. The original molecule will be displayed, and you can drag using left/right mouse to change viewing angle/zoom in or out.\n\nWhen prompted, you can indicate to which ring you desire to add Bq "atoms" by:\na) Entering the atom numbers directly, each separated by spaces;\nb) Entering `auto [n]\' suggesting that you want the program to detect all n-member-rings, where [n] can be omitted so as to find rings of all sizes;\nc) Entering `more [a b c ...]\' suggesting that you want the program to detect rings that contain atoms #[a], #[b], #[c], and so on.\nAfter this, the target ring will be highlighted. Note that in cases b) and c), the program requires a ONE-TIME initialization for this molecule and may take a minute or two. Quite commonly, the algorithm will return some "false" rings [see the documentation for more details]. When prompted, press `n\' and then enter to decline this being a "ring", or directly press enter to take this as a ring. If a ring is considered duplicate, press `y\' to add this ring anyway, or directly press enter to skip over.\n\nAfter this, you will see three Bq "atoms" and a best-fitting plane numbered "P[n]" added to the figure, where n refers to the ring number. You will also see the Bq coordinates and the plane equation in the terminal.\n\nBesides, in the terminal you can also:\nd) Enter `del [n]\' to delete ring #[n], where [n] can be omitted so as to delete the last ring;\ne) Enter `show [n]\' to display information of ring #[n], where [n] can be omitted so as to show the last ring;\nf) Directly press enter to save all the changes.\nNote that in case d), the ring numbers and Bq numbers are subject to change after deletion. The program will not save anything unless you do as described in case f).\n\nYou always can toggle visibility of the components in the figure by clicking the checkbox, such as hydrogens, planes, etc., for a more clear view.')
+print('=' * 50)
+
+# </block1><block2><!--coordinates processing-->
+try: filename = sys.argv[1].strip(); print('Coordinates read from .gjf file: '+filename)
+except: filename = input('Input a .gjf file (drag-drop supported): ').strip()
+filename = filename.replace('\'', '').replace('"', '').replace('\\ ', ' ')
+try:
+  with open(filename) as f: d = f.readlines()
+except: input('File not found or not accessible. Please press enter to exit.'); os._exit(-1)
+try: filename2 = filename[:filename.rindex('.')]+'.nicsa' # extra data about the molecule
+except: filename2 = filename+'.nicsa'
+try:
+  with open(filename2) as f: exec(f.read())
+except: pass
+geom_defined = True
+for i in ('connectivity', 'connectivityH', 'ringsAuto', 'ringsReduced'):
+  if i in dir():
+    print('Variable `'+i+'\' read from file: '+filename2)
+  elif i[:12] == 'connectivity': geom_defined = False
+
+num = 0 # atom number
+chkNum = -1 # the line that indicates the Gaussian .chk file
+cmdNum = -1 # the line that indicates the Gaussian keywords
+lastNum = 0 # the last line that records a coordinate
+xyz = []; xyzH = []; xyzBqIni = [] # coordinates of non-H, hydrogen, and Bq atoms
+names = [] # the atom types
+BqIndIni = [] # all Bq "atoms" already added in the .gjf file
+for i, j in enumerate(d):
+   if cmdNum < 0 and j[:2] == '# ': cmdNum = i
+   if chkNum < 0 and j[:4].lower() == '%chk': chkNum = i
+   try:
+     c = j.split()
+     x, y, z = map(float, c[1:]) # coordinates
+     try: int(c[0]); continue # to ensure the first component is an atom name rather than a number
+     except: pass # this is to avoid misinterpretation of files with `geom=connectivity' keywords
+     num += 1 # atom number increases one unless exception
+     lastNum = i
+     if c[0].upper() == 'H':
+       xyzH.append((x, y, z))
+     elif c[0].upper() == 'BQ':
+       xyzBqIni.append((x,y,z)); BqIndIni.append(num)       
+     else:
+       xyz.append((x, y, z))
+       names.append((c[0], num))
+   except: pass
+
+numTotal = num # total number of atoms
+if chkNum < 0: input('This .gjf file does not indicate a checkpoint file\'s path and may be corrupt. Please press enter to exit.'); os._exit(-1)
+if cmdNum < 0: input('This .gjf file does not indicate any Gaussian keyword and may be corrupt. Please press enter to exit.'); os._exit(-1)
+if num < 3: input('This .gjf file contains less than 3 valid coordinates and may be corrupt. Please press enter to exit.'); os._exit(-1)
+if BqIndIni != []: print('Warning: this gjf file has already contained `Bq\' atom(s).')
+d[chkNum] = '%chk=' + os.path.basename(filename2) + '.chk\n'
+d[cmdNum] = COMMAND + '\n'
+
+plt.ion()
+fig = plt.figure(figsize=(7, 6))
+plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+ax = fig.gca(projection='3d')
+
+def text(xs, ys, zs, label, color):
+  vis = COMPONENTS[1]
+  if label[:4] == '[Bq]': vis = checkStates(1) and checkStates(4)
+  return ax.text(xs, ys, zs, label, size='xx-small', zorder=-1, color='k', bbox=dict(boxstyle='Round, pad=0.2', facecolor=color, alpha=0.4), visible=vis)
+
+atom_props = [[], []] # radii, colors
+annotations = []; annotationsBq = []; annotationsPlane = [] # atom labels
+if not geom_defined: connectivity = [] # which two non-H atoms are bonded
+for i in range(len(names)):
+  atom_props[0].append(atom_prop(names[i][0]))
+  color = atom_prop(names[i][0], 1)
+  atom_props[1].append(color)
+  xyzI = xyz[i]
+  annotations.append(text(xyzI[0], xyzI[1], xyzI[2], names[i][0] + str(names[i][1]), color)) # labels
+  if geom_defined: continue
+  for j in range(i+1, len(names)): # determine bonds
+    xyzJ = xyz[j]
+    if (xyzI[0]-xyzJ[0])**2+(xyzI[1]-xyzJ[1])**2+(xyzI[2]-xyzJ[2])**2 < BOND_LIMIT**2: connectivity.append((i, j))
+
+for i, j in enumerate(xyzBqIni):
+  annotations.append(text(j[0], j[1], j[2], 'Bq' + str(BqIndIni[i]), ATOMS['BQ'][1])) # labels of Bq's
+
+atom_props[0].extend([ATOMS['BQ'][0]-85]*len(xyzBqIni))
+atom_props[1].extend([ATOMS['BQ'][1]]*len(xyzBqIni))
+
+# </block2><block3><!--molecule plotting-->
+XsYsZs = tuple(zip(*(xyz+xyzBqIni)))
+nonHs = ax.scatter(*XsYsZs, s=atom_props[0], c=atom_props[1], edgecolors='face') # draw non-H atoms
+atom_props[1] = nonHs.get_facecolor().copy() # to preserve an original copy
+
+# this is a bug in 3D plotting of matplotlib, so the limits of z-axis must be adjusted this way to equalize the scale of axes
+# https://stackoverflow.com/a/21765085
+max_range = max((max(XsYsZs[0])-min(XsYsZs[0]), max(XsYsZs[1])-min(XsYsZs[1]), max(XsYsZs[2])-min(XsYsZs[2]))) / 2
+mid_x = (max(XsYsZs[0])+min(XsYsZs[0])) / 2
+mid_y = (max(XsYsZs[1])+min(XsYsZs[1])) / 2
+mid_z = (max(XsYsZs[2])+min(XsYsZs[2])) / 2
+ax.set_xlim(mid_x - max_range, mid_x + max_range)
+ax.set_ylim(mid_y - max_range, mid_y + max_range)
+ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+if not geom_defined: connectivityH = [] # which atom is bonded with hydrogen
+Bqs = [] # Bq "atoms"
+surfaces = [] # best-fitting planes
+rings = [] # atom lists of each ring
+ringsData = [] # Bq coordinates & plane parameters of each ring
+if xyzH != []:
+  for i in xyzH:
+    if geom_defined: break
+    minL = BOND_LIMIT**2; minCoo = False # minimum distance^2; the atom coordinates with min distance
+    # if no atom is within the range of BOND_LIMIT, then consider no bond forms with this hydrogen
+    for j in xyz:
+      bLen = (i[0]-j[0])**2+(i[1]-j[1])**2+(i[2]-j[2])**2
+      if bLen < minL: minL = bLen; minCoo = j
+    if minCoo: connectivityH.append((i, minCoo))
+  Hs = ax.scatter(*zip(*xyzH), s=15, c='0.7', marker='s', visible=COMPONENTS[3]) # draw hydrogens
+
+lines = [] # bonds
+for i in connectivity:
+  lines.append(ax.plot(*zip(*(xyz[i[0]], xyz[i[1]])), color='0.5', alpha=0.7, linewidth=3, zorder=-2, visible=COMPONENTS[0])[0])
+
+linesH = [] # bonds with hydrogen
+for i in connectivityH:
+  linesH.append(ax.plot(*zip(*(i[0], i[1])), color='0.5', alpha=0.7, linewidth=1.5, zorder=-2, visible=COMPONENTS[0] and COMPONENTS[3])[0])
+
+if not geom_defined: # record in a file for furture reading
+  with open(filename2, 'w') as f:
+    print('Variable `connectivity\', `connectivityH\' written to file: '+filename2)
+    f.write('connectivity = %s\nconnectivityH = %s' % (connectivity, connectivityH))
+
+# </block3><block4><!--automatic ring-finding-->
+# finding all cycles in undirected graphs
+# unfortunately, the python code is notoriously slow
+# https://stackoverflow.com/a/16558622
+def findNewCycles(path):
+  global ringsAuto
+  start_node = path[0]
+
+  for edge in connectivity: # visit each edge and each node of each edge
+    node1, node2 = edge
+    if start_node==node1: next_node = node2
+    elif start_node==node2: next_node = node1
+    else: continue
+    if next_node not in path: # neighbor node not on path (not visited) yet
+      findNewCycles([next_node] + path) # explore extended path
+    elif len(path) > 2 and next_node == path[-1]: # cycle found
+      # rotate cycle path such that it begins with the smallest node
+      # and that the second node # will be larger on inversion of the sequence
+      n = path.index(min(path))
+      if path[n+1-len(path)] > path[n-1]: # note that path[n+1-len] = path[n+1], just to avoid index out of range
+        p = path[n::-1]+path[:n:-1] # should inverse the sequence
+      else: p = path[n:]+path[:n]
+      if p not in ringsAuto: # new ring
+        ringsAuto.append(p)
+
+def initRings():
+  global ringsAuto, ringsReduced
+  ringsAuto = []
+  print('=' * 50)
+  print('For automatic ring-finding analysis in this molecule, the program requires a ONE-TIME initialization; please wait patiently for a minute or two.')
+  i = 0
+  for edge in connectivity:
+    for node in edge:
+      findNewCycles([node])
+    i += 1
+    if sys.version_info.major < 3: # python2 cannot display correctly when print in a line
+      print('\rInitializing ...\t%d%%\033[1A' % (i*100/len(connectivity))) # ANSI escape sequence \e[1A = cursor up
+    else: print('\rInitializing ...\t%d%%' % (i*100/len(connectivity)), end='')
+    if plt.fignum_exists(1): flush_events()
+  ringsReduced = ringsAuto[:] # only the smallest rings
+  # this process is actually flawed, and may reckon in more rings than expected, though in very rare cases
+  # since the algorithm addressed the issue topologically rather than geometrically
+  for i in ringsAuto:
+    for j in ringsAuto:
+      if i==j: continue
+      contain = len(set(j)-set(i)) # the number of atoms in ring_j but not in ring_i
+      # let's consider at least a bit about geometry
+      # we assume that the molecule does not contain bridged rings
+      # then it is impossible for ring_i not to include ring_j when they share only one vertex
+      if contain <= 1: ringsReduced.remove(i); break
+  print('Initialized. From now on, any automatic analysis for this molecule will be no longer time-consuming.')
+  with open(filename2, 'w') as f: # record in a file for furture reading
+    print('Variable `connectivity\', `connectivityH\', `ringsAuto\', `ringsReduced\' written to file: '+filename2)
+    f.write('connectivity = %s\nconnectivityH = %s\nringsAuto = %s\nringsReduced = %s' % (connectivity, connectivityH, ringsAuto, ringsReduced))
+
+# </block4><block5-1><!--coordinates pre-processing-->
+def main(ring):
+  global num
+  ringIndices = [] # Index of each atom in the ring
+  xyzRing = [] # coordinates of atoms in the ring
+  ringNames = [] # atoms that comprises the ring
+  
+  print('-' * 50)
+  try:
+    if len(ring) < 3: raise(RuntimeError('At least three atoms should be assigned'))
+    atom_indices = [j[1] for j in names]
+    nonHs._facecolor3d = atom_props[1].copy() # restore the original color
+    for i in ring:
+      n = atom_indices.index(int(i))
+      ringIndices.append(n)
+      ringNames.append(names[n][0] + i)
+      xyzRing.append(xyz[n])
+      nonHs._facecolor3d[n] = ATOMS['highlight'] # highting the atoms in the ring
+      # matplotlib bug: `set_color' does not work (https://github.com/matplotlib/matplotlib/issues/13035)
+  except Exception as e: print(repr(e)); return
+  nonHs.set_color(nonHs._facecolor3d)
+  if int(__version__[0]) < 2: plt.draw() # for matplotlib < 2, manual refresh
+
+# </block5-1><block5-2><!--binary linear regression-->
+  xyzRingT = tuple(zip(*xyzRing))
+  av_x, av_y, av_z = map(lambda x: sum(x)/len(x), xyzRingT) # mean value
+  l_xx = l_yy = l_zz = l_xy = l_xz = l_yz = 0 # regression coefficients
+  for i in xyzRing:
+    d_x, d_y, d_z = i[0]-av_x, i[1]-av_y, i[2]-av_z
+    l_xx += d_x**2; l_yy += d_y**2; l_zz += d_z**2
+    l_xy += d_x*d_y; l_xz += d_x*d_z; l_yz += d_y*d_z
+  if l_xx*l_yy == l_xy**2:
+    # the coefficients should be calculated in other ways
+    # besides, `plot_trisurf' will throw errors in this case
+    print('Error: One of the following problems occurred, which cannot be addressed by this program.')
+    print('a) The chosen atoms are collinear; please choose other atoms instead;')
+    print('b) The best-fitting plane is parallel to z-axis; please try to rotate the Cartesian coordinate system so as to make it work.')
+    return
+
+  contain = False
+  setRing = set(ringIndices)
+  for i in range(len(rings)):
+    setRingE = set(rings[i])
+    if setRingE >= setRing or setRing < setRingE:
+      if input2('Warning: the ring #%d (comprised of %s) may be the same as ring #%d. Continue anyway? (`Y\' for yes) ' % (len(rings)+1, ' '.join(ringNames), i+1)).lower() != 'y': return
+      contain = True; break
+  if not contain:
+    if input2(('Is the ring #%d comprised of these atoms: ' % (len(rings)+1)) + ' '.join(ringNames) + ' ? (`N\' for no) ').lower() == 'n': return
+
+  # equation of the plane: l_A*X + l_B*Y + Z + l_D = 0
+  l_A = (l_xy*l_yz-l_yy*l_xz)/(l_xx*l_yy-l_xy**2)
+  l_B = (l_xy*l_xz-l_xx*l_yz)/(l_xx*l_yy-l_xy**2)
+  l_D = -av_z-l_A*av_x-l_B*av_y
+  if l_zz == 0: R2 = 1 # avoid the `0/0' error
+  else: R2 = (-l_A*l_xz-l_B*l_yz)/l_zz
+
+  # finding three Bq "atoms"
+  norm = (1+l_A**2+l_B**2)**.5
+  normVec = (l_A/norm, l_B/norm, 1/norm)
+  xyzBqT = ([av_x, 0, 0], [av_y, 0, 0], [av_z, 0, 0])
+  for i in range(3): xyzBqT[i][1] = xyzBqT[i][0] + normVec[i]; xyzBqT[i][2] = xyzBqT[i][0] - normVec[i]
+  xyzBq = tuple(zip(*xyzBqT))
+
+# </block5-2><block5-3><!--determining four vertices of the plane-->
+  randX = random.random()
+  randY = random.random()
+  randZ = -l_D-l_A*randX-l_B*randY # to take a random dot on the plane
+  randNorm = ((randX-av_x)**2 + (randY-av_y)**2 + (randZ-av_z)**2)**0.5
+  randVec = ((randX-av_x)/randNorm, (randY-av_y)/randNorm, (randZ-av_z)/randNorm) # a random vector in plane
+  try:
+    vertX = (normVec[1]*randVec[2]-normVec[2]*randVec[1])/(normVec[0]*randVec[1]-normVec[1]*randVec[0])
+    vertY = (normVec[0]*randVec[2]-normVec[2]*randVec[0])/(normVec[1]*randVec[0]-normVec[0]*randVec[1])
+    vertNorm = (1+vertX**2+vertY**2)**0.5
+    vertVec = (vertX/vertNorm, vertY/vertNorm, 1/vertNorm) # a vector perpendicular to randVec
+  except ZeroDivisionError: # the plane is perpendicular to z-axis
+    vertX = -randVec[1]/randVec[0]
+    vertNorm = (1+vertX**2)**0.5
+    vertVec = (vertX/vertNorm, 1/vertNorm, 0)
+  xyzPlaneT = ([av_x, 0, 0, 0], [av_y, 0, 0, 0], [av_z, 0, 0, 0])
+  for i in range(3): # four points that define the plane
+    xyzPlaneT[i][3] = xyzPlaneT[i][0] - vertVec[i]
+    xyzPlaneT[i][2] = xyzPlaneT[i][0] + vertVec[i]
+    xyzPlaneT[i][1] = xyzPlaneT[i][0] - randVec[i]
+    xyzPlaneT[i][0] += randVec[i]
+
+# </block5-3><block5-4><!--output data-->
+  rings.append(ringIndices)
+  ringsData.append((xyzBq, l_A, l_B, l_D, R2))
+  print('Equation of the best fitting plane: %.8f X + %.8f Y + Z + %.8f = 0' % (l_A, l_B, l_D))
+  print('Multiple correlation coefficient: R_xy^2 = %.8f' % R2)
+  print('Coordinates of Bq "atoms" [# %d~%d]:' % (num+1, num+3))
+
+  Bqs.append(ax.scatter(*xyzBqT, s=ATOMS['BQ'][0]-85, c=ATOMS['BQ'][1], marker='^', visible=checkStates(4))) # draw Bq "atoms"
+  for i in range(3):
+    num += 1
+    annotationsBq.append(text(xyzBq[i][0], xyzBq[i][1], xyzBq[i][2], '[Bq]' + str(num), ATOMS['BQ'][1])) # labels of Bq's
+    print(' Bq\t%.8f\t%.8f\t%.8f' % tuple(xyzBq[i]))
+
+  surfaces.append(ax.plot_trisurf(*xyzPlaneT, color=ATOMS['BQ'][1], edgecolors='none', alpha=0.4, zorder=-3, shade=False, visible=checkStates(2)))
+  annotationsPlane.append(ax.text((xyzPlaneT[0][1]+av_x)/2, (xyzPlaneT[1][1]+av_y)/2, (xyzPlaneT[2][1]+av_z)/2, 'P%d' % len(rings), size='xx-small', zorder=5, color='k', visible=checkStates(2)))
+  if int(__version__[0]) < 2: plt.draw()
+
+# </block5-4><block6><!--user interface-->
+def on_click(label): # check status changed, then toggle visibility
+  if label == 'Bonds':
+    for i in lines: i.set_visible(checkStates(0))
+    for i in linesH: i.set_visible(checkStates(0) and checkStates(3))
+  if label == 'Labels':
+    for i in annotations: i.set_visible(checkStates(1))
+    for i in annotationsBq: i.set_visible(checkStates(1) and checkStates(4))
+  if label == 'Planes':
+    for i in surfaces: i.set_visible(checkStates(2))
+    for i in annotationsPlane: i.set_visible(checkStates(2))
+  if label == 'H\'s':
+    try: Hs.set_visible(checkStates(3))
+    except: pass
+    for i in linesH: i.set_visible(checkStates(0) and checkStates(3))
+  if label == 'Bq\'s':
+    for i in annotationsBq: i.set_visible(checkStates(1) and checkStates(4))
+    for i in Bqs: i.set_visible(checkStates(4))
+  if int(__version__[0]) < 2: plt.draw() # update
+
+checkBox = CheckButtons(plt.axes([0.85,0.05,0.11,0.125]), ['Bonds','Labels','Planes','H\'s','Bq\'s'], COMPONENTS) # visibility of components
+checkBox.on_clicked(on_click) # register event
+fig.canvas.mpl_connect('close_event', lambda event: plt.ioff()) # to avoid calling plt.draw() [which produces tons of error messages] after the window is closed
+
+# </block6><block7><!--main thread-->
+while True:
+  print()
+  plt.show()
+  ring = input2('Enter atom numbers that form the ring of interest: ').split()
+  if ring == []:
+    print('-' * 50)
+    if rings == []: print('Warning: no change saved.'); break
+    if os.path.exists(filename2 + '.gjf'):
+      input2('Warning: file ' + filename2 + '.gjf already exists. Please press enter to overwrite.')
+    print('New .gjf file saved at: ' + filename2 + '.gjf')
+    f = open(filename2 + '.gjf', 'w')
+    for i, j in enumerate(d):
+      f.write(j)
+      if i == lastNum:
+        for x in ringsData:
+          for y in x[0]: f.write(' Bq               %.8f    %.8f    %.8f\n' % tuple(y))
+    f.close()
+    break
+  elif ring[0] == 'auto':
+    try: ringsAuto
+    except NameError: # ring-finding analysis not initialized
+      initRings()
+    try:
+      ring_size = int(ring[1])
+      has_ring = False
+      for i in ringsAuto:
+        if len(i) == ring_size:
+          has_ring = True
+          main([str(names[x][1]) for x in i])
+      if not has_ring: print('-' * 50); print('Error: No %d-member-ring detected.' % ring_size); continue
+    except: # no ring size assigned
+      if ringsReduced == []: print('-' * 50); print('Error: No ring detected.'); continue
+      for i in ringsReduced: main([str(names[x][1]) for x in i])
+
+  elif ring[0] == 'more': # autocomplete
+    ring.pop(0)
+    try:
+      if ring == []: raise(RuntimeError('At least one atom should be assigned'))
+      more = []; atom_indices = [j[1] for j in names]
+      for i in ring: more.append(atom_indices.index(int(i)))
+    except Exception as e: print('-' * 50); print(repr(e)); continue
+    try: ringsAuto
+    except NameError: # ring-finding analysis not initialized
+      initRings()
+    has_ring = False
+    for i in ringsReduced:
+      if set(more) <= set(i): main([str(names[x][1]) for x in i]); has_ring = True; continue
+    if not has_ring: print('-' * 50); print('Error: No ring containing atoms list %s detected.' % str(ring))
+
+  elif ring[0] == 'del':
+    print('-' * 50); 
+    if len(ring) == 1:
+      if rings == []: print('Error: There is no any ring to be deleted.'); continue
+      delNum = len(rings)
+    else:
+      try:
+        delNum = int(ring[1])
+        if delNum < 1 or delNum > len(rings): raise(RuntimeError)
+      except: print('Error: Please assign a valid ring number to be deleted.'); continue
+    print('Do you wish to remove ring #%d comprised of: ' % delNum, end='')
+    for i in rings[delNum-1]:
+      print(names[i][0]+str(names[i][1]), end=' ')
+      nonHs._facecolor3d[i] = ATOMS['highlight'] # highting the atoms in the ring [matplotlib bug (vide supra)]
+    nonHs.set_color(nonHs._facecolor3d)
+    if int(__version__[0]) < 2: plt.draw()
+    if input2('? (`N\' for no) ').lower() == 'n': continue;
+    num -= 3
+    if delNum != len(rings): # change plane numbers and Bq "atom" numbers
+      for i in range(delNum, len(rings)):
+        annotationsPlane[i].set_text('P'+str(i))
+        for j in range(3): annotationsBq[3*i+j].set_text('[Bq]'+str(numTotal+3*i+j-2))
+
+    delNum -= 1 # start counting from 0 rather than 1
+    rings.pop(delNum); ringsData.pop(delNum) # delete the ring
+    surfaces[delNum].remove(); annotationsPlane[delNum].remove(); Bqs[delNum].remove()
+    for i in annotationsBq[delNum*3:delNum*3+3]: i.remove()
+    del(surfaces[delNum]); del(annotationsPlane[delNum]); del(Bqs[delNum]); del(annotationsBq[delNum*3:delNum*3+3])
+
+  elif ring[0] == 'show': # display information
+    print('-' * 50); 
+    if len(ring) == 1:
+      if rings == []: print('Error: There is no any ring to be displayed.'); continue
+      showNum = len(rings)
+    else:
+      try:
+        showNum = int(ring[1])
+        if showNum < 1 or showNum > len(rings): raise(RuntimeError)
+      except: print('Error: Please assign a valid ring number to be displayed.'); continue
+    print('The ring #%d is comprised of: ' % showNum, end='')
+    for i in rings[showNum-1]:
+      print(names[i][0]+str(names[i][1]), end=' ')
+      nonHs._facecolor3d[i] = ATOMS['highlight'] # highting the atoms in the ring
+    nonHs.set_color(nonHs._facecolor3d)
+    if int(__version__[0]) < 2: plt.draw()
+
+    ringData = ringsData[showNum-1]
+    print('\nEquation of the best fitting plane: %.8f X + %.8f Y + Z + %.8f = 0' % (ringData[1], ringData[2], ringData[3]))
+    print('Multiple correlation coefficient: R_xy^2 = %.8f' % ringData[4])
+    print('Coordinates of Bq "atoms" [# %d~%d]:' % (numTotal+3*showNum-2, numTotal+3*showNum))
+    for i in ringData[0]:
+      print(' Bq\t%.8f\t%.8f\t%.8f' % tuple(i))
+    input2('Please press enter to continue.')
+
+  else: main(ring)
+
+  nonHs.set_color(atom_props[1]) # to nullify any "highlight" effects
+  nonHs._facecolor3d = nonHs.get_facecolor() # matplotlib bug: `set_color' does not work (vide supra)
+  if int(__version__[0]) < 2: plt.draw()
+
+print('=' * 50)
+input2('Please press enter to exit.')
+# </block7>
