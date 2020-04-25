@@ -8,8 +8,20 @@ Automatically creates an Gaussian input file eligible for NICS(0)/(1) calculatio
 * Automatic ring-finding function
 * Automatic analysis of the locations of "Bq" ghost atoms
 
+## What's new
+
+### Version 1.05
+* Starting from this version, the configurations will be defined in another file, `nicsa.config` in the same folder, allowing Windows users to modify settings by editing this plain text file rather than re-compiling the executable
+* Users will now have the option to turn off the 3D axes and the background
+* The performance of automatic ring-finding has been greatly improved by removing unnecessary nodes (e.g. hydrogen atoms)
+
 ## Runtime Environment
 The requirements listed below are recommended for running this program. If not met, however, workarounds are also provided here.
+
+## How to update to Version 1.05
+* Below are for Version 1.01, if you want to update to Version 1.05, please see the following:
+* **For users with Python environment**, either on Windows or on \*nix systems, you can simply replace the file, `nicsa` from the older version package, with the new version one. **In addition, you must** download the new configuration file, `nicsa.config`, and then place it alongside `nicsa`
+* **For Windows users without Python environment**, unfortunately, there is no compiled executable for this version. Please wait for the next stable version
 
 ### For Windows
 * Windows 7 x64 or higher
@@ -32,10 +44,10 @@ Fortunately, Python 2.7 with Matplotlib 1.3 was built-in to Mac OS X. However, t
 
   * Matplotlib >= 1.3 **with mpl_toolkits**
   
-After proper deployment, only [nicsa](/nicsa) need to be downloaded. Run `chmod +x nicsa` in bash to make it executable.
+After proper deployment, only [nicsa](/nicsa) and its configuration file [nicsa.config](/nicsa.config) need to be downloaded. Run `chmod +x nicsa` in bash to make it executable.
 
 ### Additional Comment
-For Unix systems (Mac OS X and Linux), if you have deployed a Python3 environment rather than Python2, you may want to change the first line of `nicsa` to `#!/usr/bin/env python3` instead.
+For \*nix systems (Mac OS X and Linux), if you have deployed a Python3 environment rather than Python2, **you may want to change the first line of `nicsa` to `#!/usr/bin/env python3` instead**.
 
 ## How to use
 ### Run the program
@@ -73,7 +85,7 @@ For Unix systems (Mac OS X and Linux), if you have deployed a Python3 environmen
 
     * There is a little difference between `auto [n]` and `auto`/`more [a b c ...]`; see the section [Details on Ring Finding](/README.md#details-on-ring-finding) for more information;
     * The automatic ring-finding function may return some *false* rings (see the section [Details on Ring Finding](/README.md#details-on-ring-finding) for more information), and you might need to distinguish them manually;
-    * Except the first scenario (direct designation), the program requires a **ONE-TIME** initialization for this molecule and may take a minute or two, after which the information will be recorded in `./<filename>.nicsa` for future convenience;
+    * Except the first scenario (direct designation), the program requires a **ONE-TIME** initialization for this molecule and may take a while (up to tens of seconds), after which the information will be recorded in `./<filename>.nicsa` for future convenience;
 
   * After this, the target ring will be highlighted.
     * When prompted "Is this ...?", directly press enter to continue (take this as a *true* ring), or press 'n' and then enter to cancel;
@@ -92,10 +104,11 @@ For Unix systems (Mac OS X and Linux), if you have deployed a Python3 environmen
 * Click on the checkbox in the figure to toggle visibility of labels, ghost atoms, ring planes, etc.
 
 ### Advanced Settings
-* You can edit Line 11~24 in the Python script file [nicsa](/nicsa) according to the annotations;
+* You can edit the configuration file [nicsa.config](/nicsa.config) according to the annotations;
 
+  * It is written in Python code;
   * Among them, `COMMAND` and `COMPONENTS` are especially useful in that you may want to change the method/basis set for a NICS calculation or the default visiblity of bonds, labels, atoms, etc.
-  * Of course, if you run the single-executable version with integrated Python environment, you cannot edit this since the source code has been compiled and thus not editable.
+  * ~~Of course, if you run the single-executable version with integrated Python environment, you cannot edit this since the source code has been compiled and thus not editable.~~
 * If a .gjf has been read by the program, a `<filename>.nicsa` plain-text file will be generated for future convenience. You can edit this file using a text editor (like Notepad) to re-define the bonds and rings.
 
   * The `connectivity` list records the bonds between non-hydrogen atoms. Each tuple has two numbers defining which two atoms are bonded. Note that the number **is not the actual atom number**, but the number of non-H atoms without reckoning in hydrogens or ghost atoms, and you should start counting from zero instead of one;
@@ -104,7 +117,7 @@ For Unix systems (Mac OS X and Linux), if you have deployed a Python3 environmen
   * The `ringsReduced` list is similar to `ringsAuto` except that it does not count in the rings that are *obviously false*. For example, a naphthalene has two 6-member-rings, and those two, in combination, also form a 10-member-ring, but the 10-member-ring is *obviously* not what we want. See the section [Details on Ring Finding](/README.md#details-on-ring-finding) for more information.
 
 ### Details on Ring Finding
-* The algorithm first tries to all the circles (`RingsAuto`). If a large circle contains a small one, then both two circles are taken into account, though pratically we should not count in the large one. (Remember the naphthalene example above?) This process is kind of slow for large polycyclic aromatics, *but this is Python we are talking about, so you know ...*
+* The algorithm first tries to all the circles (`RingsAuto`). If a large circle contains a small one, then both two circles are taken into account, though pratically we should not count in the large one. (Remember the naphthalene example above?) This process might take tens of seconds for large polycyclic aromatics
 * Then the program will try to rule out the *false* rings and store the legitimate ones in the `RingsReduced` list. The algorithm is not perfect now. Although it is easy to handle the issue topologically (say, if Ring<sub>*i*</sub> has all the vertices of Ring<sub>*j*</sub>, then Ring<sub>*i*</sub> is not legitimate), you cannot tell whether a ring is what we want if not taking geometry into account. However, it is really hard to do it on a "geometrical" level. What we can only do is to consider about the simplest case, *i.e.* it is impossible for Ring<sub>*i*</sub> not to include Ring<sub>*j*</sub> when they share only one vertex, by assuming that the molecule does not contain bridged rings
 
   * Despite the effort, exceptions may, though rare, happen for heavily-fused polycyclic molecules as shown in the picture below. In this scenerio, you must rule it out mannually.<p align="center"><img src="/screenshots/3.png" width="60%" height="60%"></p>

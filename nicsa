@@ -8,25 +8,9 @@ from __future__ import print_function
 if hasattr(__builtins__, 'raw_input'): input = raw_input
 
 # <block1><!--definitions-->
-ATOMS = {'B': (192, (1., .710, .710, 1.)), 'C': (170, (.467, .467, .467, 1.)),
-'N': (155, (.631, .631, 1., 1.)), 'O': (152, (.796, 0., 0., 1.)),
-'F': (147, (.776, 1., .071, 1.)), 'AL': (184, (.812, .651, .651, 1.)),
-'SI': (210, (.820, .839, .549, 1.)), 'P': (180, (1., .580, .129, 1.)),
-'S': (180, (.796, .208, 1., 1.)), 'CL': (175, (.267, 1., .227, 1.)),
-'GA': (187, (.761, .561, .561, 1.)), 'GE': (211, (.400, .561, .561, 1.)),
-'AS': (185, (.741, .502, .890, 1.)), 'SE': (190, (1., .631, 0., 1.)),
-'BR': (185, (.745, .501, .235, 1.)), 'SN': (217, (.400, .502, .502, 1.)),
-'SB': (206, (.620, .388, .710, 1.)), 'TE': (206, (.831, .478, 0., 1.)),
-'I': (198, (.600, .600, 1., 1.)), 'BI': (207, (.620, .310, .710, 1.)),
-'OTHER': (170, (1., 0., 1., 1.)), 'BQ': (120, (.081, .311, .537, 1.)), 'highlight': (0, .75, 0, 1)} # vdw radii (in pm) and colors
-BOND_LIMIT = 1.8 # the maximum distance (in anstrom) between atoms for a bond to be considered as "existing"
-COMPONENTS = [True, True, True, True, True] # set which component(s) to be visible: Bonds, Labels, Planes, H's, Bq's
-COMMAND = '# nmr=giao b3lyp/6-311+g(2d,p)' # Gaussian keywords of a NICS calculation
-
 import os
 import sys
 import random
-import threading
 import matplotlib.pyplot as plt
 from matplotlib import __version__
 from mpl_toolkits.mplot3d import Axes3D
@@ -37,6 +21,20 @@ warnings.filterwarnings('ignore')
 if int(__version__[0]) >= 3: # in latest matplotlib (>= 3.0), warning messages will be printed when 'c' (color) is not `np.array'
   from matplotlib.axes._axes import _log
   _log.setLevel('ERROR') # suppress warning messages
+
+thisDir = os.path.abspath(os.path.dirname(sys.argv[0])) # where this script locates
+try: f = open(os.path.join(thisDir, 'nicsa.config')); exec(f.read()); f.close() # definitions
+except: input('Config file missing or damaged. Please press enter to exit.'); os._exit(-1)
+
+# https://stackoverflow.com/a/13605579/11979352
+def uniquify(lst): # np.unique(lst, axis=0)
+  lst.sort()
+  if len(lst) <= 1: return
+  last = lst[-1]
+  for i in range(len(lst) - 2, -1, -1):
+    item = lst[i]
+    if item == last: del lst[i]
+    else: last = item
 
 def flush_events(): # flush GUI events to prevent freezing
   import time
@@ -68,12 +66,14 @@ def input2(prompt):
 if os.name != 'nt':
   input2 = input # for unix, fallback to original input method
 
-if os.name == 'nt': os.system('title NICS_Automator v1.01 by Z. Sun'); print() # windows
+if os.name == 'nt':
+  import threading
+  os.system('title NICS_Automator v1.05 by Z. Sun'); print() # windows
 else: # unix
 #  if sys.version_info.major < 3:
 #    if not os.system('which python3 1>/dev/null 2>&1'):
 #      os.system('python3 "' + '" "'.join(sys.argv) + '"'); os._exit(0) # prefer python3 to python2
-  print('\033]0;NICS_Automator v1.01 by Z. Sun\a')
+  print('\033]0;NICS_Automator v1.05 by Z. Sun\a')
 
 print('Usage: This tool is designed to automatically create an Gaussian input file eligible for NICS(0) and NICS(1) calculations based on the initial .gjf file. The original molecule will be displayed, and you can drag using left/right mouse to change viewing angle/zoom in or out.\n\nWhen prompted, you can indicate to which ring you desire to add Bq "atoms" by:\na) Entering the atom numbers directly, each separated by spaces;\nb) Entering `auto [n]\' suggesting that you want the program to detect all n-member-rings, where [n] can be omitted so as to find rings of all sizes;\nc) Entering `more [a b c ...]\' suggesting that you want the program to detect rings that contain atoms #[a], #[b], #[c], and so on.\nAfter this, the target ring will be highlighted. Note that in cases b) and c), the program requires a ONE-TIME initialization for this molecule and may take a minute or two. Quite commonly, the algorithm will return some "false" rings [see the documentation for more details]. When prompted, press `n\' and then enter to decline this being a "ring", or directly press enter to take this as a ring. If a ring is considered duplicate, press `y\' to add this ring anyway, or directly press enter to skip over.\n\nAfter this, you will see three Bq "atoms" and a best-fitting plane numbered "P[n]" added to the figure, where n refers to the ring number. You will also see the Bq coordinates and the plane equation in the terminal.\n\nBesides, in the terminal you can also:\nd) Enter `del [n]\' to delete ring #[n], where [n] can be omitted so as to delete the last ring;\ne) Enter `show [n]\' to display information of ring #[n], where [n] can be omitted so as to show the last ring;\nf) Directly press enter to save all the changes.\nNote that in case d), the ring numbers and Bq numbers are subject to change after deletion. The program will not save anything unless you do as described in case f).\n\nYou always can toggle visibility of the components in the figure by clicking the checkbox, such as hydrogens, planes, etc., for a more clear view.')
 print('=' * 50)
@@ -174,6 +174,7 @@ mid_z = (max(XsYsZs[2])+min(XsYsZs[2])) / 2
 ax.set_xlim(mid_x - max_range, mid_x + max_range)
 ax.set_ylim(mid_y - max_range, mid_y + max_range)
 ax.set_zlim(mid_z - max_range, mid_z + max_range)
+ax._axis3don = COMPONENTS[5]
 
 if not geom_defined: connectivityH = [] # which atom is bonded with hydrogen
 Bqs = [] # Bq "atoms"
@@ -212,7 +213,7 @@ def findNewCycles(path):
   global ringsAuto
   start_node = path[0]
 
-  for edge in connectivity: # visit each edge and each node of each edge
+  for edge in graph: # visit each edge and each node of each edge
     node1, node2 = edge
     if start_node==node1: next_node = node2
     elif start_node==node2: next_node = node1
@@ -230,18 +231,25 @@ def findNewCycles(path):
         ringsAuto.append(p)
 
 def initRings():
-  global ringsAuto, ringsReduced
+  global ringsAuto, ringsReduced, graph
   ringsAuto = []
+  graph = [] # excluded nodes that are hydrogen atoms
   print('=' * 50)
   print('For automatic ring-finding analysis in this molecule, the program requires a ONE-TIME initialization; please wait patiently for a minute or two.')
-  i = 0
-  for edge in connectivity:
-    for node in edge:
-      findNewCycles([node])
+  i = 0; nodes = []
+  
+  for edge in connectivity: # no "hydrogen" nodes
+    if names[edge[0]][0].upper() != 'H' and names[edge[1]][0].upper() != 'H':
+      graph.append(edge)
+      nodes.append(edge[0]); nodes.append(edge[1])
+  uniquify(nodes)
+
+  for node in nodes:
+    findNewCycles([node])
     i += 1
     if sys.version_info.major < 3: # python2 cannot display correctly when print in a line
-      print('\rInitializing ...\t%d%%\033[1A' % (i*100/len(connectivity))) # ANSI escape sequence \e[1A = cursor up
-    else: print('\rInitializing ...\t%d%%' % (i*100/len(connectivity)), end='')
+      print('\rInitializing ...\t%d%%\033[1A' % (i*100//len(nodes))) # ANSI escape sequence \e[1A = cursor up
+    else: print('\rInitializing ...\t%d%%' % (i*100//len(nodes)), end='')
     if plt.fignum_exists(1): flush_events()
   ringsReduced = ringsAuto[:] # only the smallest rings
   # this process is actually flawed, and may reckon in more rings than expected, though in very rare cases
@@ -254,7 +262,7 @@ def initRings():
       # we assume that the molecule does not contain bridged rings
       # then it is impossible for ring_i not to include ring_j when they share only one vertex
       if contain <= 1: ringsReduced.remove(i); break
-  print('Initialized. From now on, any automatic analysis for this molecule will be no longer time-consuming.')
+  print('\rInitialized. From now on, any automatic analysis for this molecule will be no longer time-consuming.')
   with open(filename2, 'w') as f: # record in a file for furture reading
     print('Variable `connectivity\', `connectivityH\', `ringsAuto\', `ringsReduced\' written to file: '+filename2)
     f.write('connectivity = %s\nconnectivityH = %s\nringsAuto = %s\nringsReduced = %s' % (connectivity, connectivityH, ringsAuto, ringsReduced))
@@ -366,22 +374,24 @@ def on_click(label): # check status changed, then toggle visibility
   if label == 'Bonds':
     for i in lines: i.set_visible(checkStates(0))
     for i in linesH: i.set_visible(checkStates(0) and checkStates(3))
-  if label == 'Labels':
+  elif label == 'Labels':
     for i in annotations: i.set_visible(checkStates(1))
     for i in annotationsBq: i.set_visible(checkStates(1) and checkStates(4))
-  if label == 'Planes':
+  elif label == 'Planes':
     for i in surfaces: i.set_visible(checkStates(2))
     for i in annotationsPlane: i.set_visible(checkStates(2))
-  if label == 'H\'s':
+  elif label == 'H\'s':
     try: Hs.set_visible(checkStates(3))
     except: pass
     for i in linesH: i.set_visible(checkStates(0) and checkStates(3))
-  if label == 'Bq\'s':
+  elif label == 'Bq\'s':
     for i in annotationsBq: i.set_visible(checkStates(1) and checkStates(4))
     for i in Bqs: i.set_visible(checkStates(4))
-  if int(__version__[0]) < 2: plt.draw() # update
+  elif label == 'Axes':
+    ax._axis3don = checkStates(5)
+  if int(__version__[0]) < 2 or label == 'Axes': plt.draw() # update
 
-checkBox = CheckButtons(plt.axes([0.85,0.05,0.11,0.125]), ['Bonds','Labels','Planes','H\'s','Bq\'s'], COMPONENTS) # visibility of components
+checkBox = CheckButtons(plt.axes([0.85,0.05,0.11,0.125]), ['Bonds','Labels','Planes','H\'s','Bq\'s', 'Axes'], COMPONENTS) # visibility of components
 checkBox.on_clicked(on_click) # register event
 fig.canvas.mpl_connect('close_event', lambda event: plt.ioff()) # to avoid calling plt.draw() [which produces tons of error messages] after the window is closed
 
