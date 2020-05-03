@@ -38,10 +38,7 @@ if __name__ == '__main__':
   import os
   import sys
   import random
-  import matplotlib.pyplot as plt
-  from matplotlib import __version__
-  from mpl_toolkits.mplot3d import Axes3D
-  from matplotlib.widgets import CheckButtons
+  from matplotlib import __version__, use, get_backend
 
   import warnings
   warnings.filterwarnings('ignore')
@@ -52,6 +49,10 @@ if __name__ == '__main__':
   thisDir = os.path.abspath(os.path.dirname(sys.argv[0])) # where this script locates
   try: f = open(os.path.join(thisDir, 'nicsa.config')); exec(f.read()); f.close() # definitions
   except: input('Config file missing or damaged. Please press enter to exit.'); os._exit(-1)
+
+  import matplotlib.pyplot as plt # must import plt after designating a backend in config
+  from mpl_toolkits.mplot3d import Axes3D
+  from matplotlib.widgets import CheckButtons
 
   # https://stackoverflow.com/a/13605579/11979352
   def uniquify(lst): # np.unique(lst, axis=0)
@@ -81,30 +82,33 @@ if __name__ == '__main__':
   # a distinct thread is created for input() to avoid the issue
   # https://github.com/matplotlib/matplotlib/issues/9206
   # https://stackoverflow.com/a/34957174/
-  def input_return():
-    global response; response = input()
+  def input_return(*args):
+    global response # cannot get return vals in Thread, so the workaround is to use a global var
+    try: response = input(*args)
+    except: print(''); response = '\n' # this return val indicates the user hits Ctrl-C as it is impossible for a user to input a linebreak
+    return response
   def input2(prompt):
+    global response
     print(prompt, end='')
     th = threading.Thread(target=input_return)
     th.start()
-    while th.isAlive():
-      if plt.fignum_exists(1): flush_events()
+    try:
+      while th.isAlive():
+        if plt.fignum_exists(1): flush_events()
+    except KeyboardInterrupt: # chances are that Ctrl-C is not captured by input_return
+      print(''); response = '\n'
     return response
   if os.name != 'nt':
-    input2 = input # for unix, fallback to original input method
+    input2 = input_return # for unix, fallback to original input method
 
   if os.name == 'nt':
-    try: # this is for compilation on Windows only
-      os.environ['TCL_LIBRARY']
-    except: # to set the environ var correctly
-      os.environ['TCL_LIBRARY'] = os.path.join(thisDir, 'tcl8.6')
     import threading
-    os.system('title NICS_Automator v1.07 by Z. Sun'); print() # windows
+    os.system('title NICS_Automator v1.08 by Z. Sun'); print() # windows
   else: # unix
   #  if sys.version_info.major < 3:
   #    if not os.system('which python3 1>/dev/null 2>&1'):
   #      os.system('python3 "' + '" "'.join(sys.argv) + '"'); os._exit(0) # prefer python3 to python2
-    print('\033]0;NICS_Automator v1.07 by Z. Sun\a')
+    print('\033]0;NICS_Automator v1.08 by Z. Sun\a')
 
   print('Usage: This tool is designed to automatically create an Gaussian input file eligible for NICS(0) and NICS(1) calculations based on the initial .gjf file. The original molecule will be displayed, and you can drag using left/right mouse to change viewing angle/zoom in or out.\n\nWhen prompted, you can indicate to which ring you desire to add Bq "atoms" by:\na) Entering the atom numbers directly, each separated by spaces;\nb) Entering `auto [n]\' suggesting that you want the program to detect all n-member-rings, where [n] can be omitted so as to find rings of all sizes;\nc) Entering `more [a b c ...]\' suggesting that you want the program to detect rings that contain atoms #[a], #[b], #[c], and so on.\nAfter this, the target ring will be highlighted. Note that in cases b) and c), the program requires a ONE-TIME initialization for this molecule and may take a while. Quite commonly, the algorithm will return some "false" rings [see the documentation for more details]. When prompted, press `n\' and then enter to decline this being a "ring", or directly press enter to take this as a ring. If a ring is considered duplicate, press `y\' to add this ring anyway, or directly press enter to skip over.\n\nAfter this, you will see three Bq "atoms" and a best-fitting plane numbered "P[n]" added to the figure, where n refers to the ring number. You will also see the Bq coordinates and the plane equation in the terminal.\n\nBesides, in the terminal you can also:\nd) Enter `del [n]\' to delete ring #[n], where [n] can be omitted so as to delete the last ring;\ne) Enter `show [n]\' to display information of ring #[n], where [n] can be omitted so as to show the last ring;\nf) Directly press enter to save all the changes.\nNote that in case d), the ring numbers and Bq numbers are subject to change after deletion. The program will not save anything unless you do as described in case f).\n\nYou always can toggle visibility of the components in the figure by clicking the checkbox, such as hydrogens, planes, etc., for a more clear view.')
   print('=' * 50)
@@ -162,7 +166,7 @@ if __name__ == '__main__':
   d[cmdNum] = COMMAND + '\n'
 
   plt.ion()
-  fig = plt.figure(figsize=(7, 6))
+  fig = plt.figure()
   plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
   ax = fig.gca(projection='3d')
 
@@ -199,6 +203,7 @@ if __name__ == '__main__':
   # this is a bug in 3D plotting of matplotlib, so the limits of z-axis must be adjusted this way to equalize the scale of axes
   # https://stackoverflow.com/a/21765085
   max_range = max((max(XsYsZs[0])-min(XsYsZs[0]), max(XsYsZs[1])-min(XsYsZs[1]), max(XsYsZs[2])-min(XsYsZs[2]))) / 2
+  max_range *= 0.75 # magnify the object a litle bit
   mid_x = (max(XsYsZs[0])+min(XsYsZs[0])) / 2
   mid_y = (max(XsYsZs[1])+min(XsYsZs[1])) / 2
   mid_z = (max(XsYsZs[2])+min(XsYsZs[2])) / 2
@@ -328,7 +333,7 @@ if __name__ == '__main__':
         if input2('Warning: the ring #%d (comprised of %s) may be the same as ring #%d. Continue anyway? (`Y\' for yes) ' % (len(rings)+1, ' '.join(ringNames), i+1)).lower() != 'y': return
         contain = True; break
     if not contain:
-      if input2(('Is the ring #%d comprised of these atoms: ' % (len(rings)+1)) + ' '.join(ringNames) + ' ? (`N\' for no) ').lower() == 'n': return
+      if input2(('Is the ring #%d comprised of these atoms: ' % (len(rings)+1)) + ' '.join(ringNames) + ' ? (`N\' for no) ').lower() in ('n', '\n'): return
 
     # equation of the plane: l_A*X + l_B*Y + Z + l_D = 0
     l_A = (l_xy*l_yz-l_yy*l_xz)/(l_xx*l_yy-l_xy**2)
@@ -405,7 +410,7 @@ if __name__ == '__main__':
       ax._axis3don = checkStates(5)
     if int(__version__[0]) < 2 or label == 'Axes': plt.draw() # update
 
-  checkBox = CheckButtons(plt.axes([0.85,0.05,0.11,0.125]), ['Bonds','Labels','Planes','H\'s','Bq\'s', 'Axes'], COMPONENTS) # visibility of components
+  checkBox = CheckButtons(plt.axes([0.855,0.02,0.125,0.19]), ['Bonds','Labels','Planes','H\'s','Bq\'s', 'Axes'], COMPONENTS) # visibility of components
   checkBox.on_clicked(on_click) # register event
   fig.canvas.mpl_connect('close_event', lambda event: plt.ioff()) # to avoid calling plt.draw() [which produces tons of error messages] after the window is closed
 
@@ -414,9 +419,11 @@ if __name__ == '__main__':
     print()
     plt.show()
     ring = input2('Enter atom numbers that form the ring of interest: ').split()
-    if ring == []:
+    if ring == []: # the user directly hits either enter or Ctrl-C
       print('-' * 50)
       if rings == []: print('Warning: no change saved.'); break
+      if response == '\n': # the user hits Ctrl-C
+        if input2('Exit without saving? (`N\' for No) ').lower() != 'n': break
       if os.path.exists(filename2 + '.gjf'):
         input2('Warning: file ' + filename2 + '.gjf already exists. Please press enter to overwrite.')
       print('New .gjf file saved at: ' + filename2 + '.gjf')
@@ -439,6 +446,7 @@ if __name__ == '__main__':
           if len(i) == ring_size:
             has_ring = True
             main([str(names[x][1]) for x in i])
+            if response == '\n': break # Ctrl-C
         if not has_ring: print('-' * 50); print('Error: No %d-member-ring detected.' % ring_size); continue
       except: # no ring size assigned
         if ringsReduced == []: print('-' * 50); print('Error: No ring detected.'); continue
@@ -456,8 +464,11 @@ if __name__ == '__main__':
         initRings()
       has_ring = False
       for i in ringsReduced:
-        if set(more) <= set(i): main([str(names[x][1]) for x in i]); has_ring = True; continue
-      if not has_ring: print('-' * 50); print('Error: No ring containing atoms list %s detected.' % str(ring))
+        if set(more) <= set(i):
+          has_ring = True
+          main([str(names[x][1]) for x in i])
+          if response == '\n': break # Ctrl-C
+      if not has_ring: print('-' * 50); print('Error: No ring containing atoms list %s detected.' % str(ring)); continue
 
     elif ring[0] == 'del':
       print('-' * 50); 
@@ -475,7 +486,7 @@ if __name__ == '__main__':
         nonHs._facecolor3d[i] = ATOMS['highlight'] # highting the atoms in the ring [matplotlib bug (vide supra)]
       nonHs.set_color(nonHs._facecolor3d)
       if int(__version__[0]) < 2: plt.draw()
-      if input2('? (`N\' for no) ').lower() == 'n': continue;
+      if input2('? (`N\' for no) ').lower() in ('n', '\n'): continue;
       num -= 3
       if delNum != len(rings): # change plane numbers and Bq "atom" numbers
         for i in range(delNum, len(rings)):
