@@ -3,14 +3,21 @@
 
 Automatically creates an Gaussian input file eligible for NICS(0)/(1) calculations based on the initial .gjf file, which can be obtained by saving the optimized geometry using GaussView.
 
+## Advertisement
+* Now a combined package of [`FETAnal`](https://github.com/Z-H-Sun/FETAnal) and `NICSA` on Windows, `CLab`, is released! **You can download [the latest release of CLab here](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip), which takes up about the same space as either of the modules but does both modules' job.**
+
 ## Features
 * A cross-platform python program
-* Graphic user interface for displaying the molecule
+* Graphic user interface (GUI) for displaying the molecule
 * User friendly
 * Automatic ring-finding function
 * Automatic analysis of the locations of "Bq" ghost atoms
 
 ## What's new
+
+### Version 1.081 (For Windows users)
+* Optimized user interface
+* Users can now create a desktop shortcut with preset setups by simply double-clicking `CreateDesktopShortcuts.exe`
 
 ### Version 1.08
 <p align="center"><img src="/screenshots/4.png" width="90%" height="90%"></p>
@@ -32,14 +39,15 @@ Automatically creates an Gaussian input file eligible for NICS(0)/(1) calculatio
 * Users will now have the option to turn off the 3D axes and the background
 * The performance of automatic ring-finding has been greatly improved by removing unnecessary nodes (e.g. hydrogen atoms)
 
-## Runtime Environment
+## Runtime Environment and Download Links
 The requirements listed below are recommended for running this program. If not met, however, workarounds are also provided here.
 
 ### For Windows
 * Windows 7 **64-bit OS** or higher
-* **It is recommended** to use the compiled program, because it is now a C-level program and runs much faster. You can download the [release package](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Win_Release.zip), extract it to anywhere, and run `nicsa\nicsa.exe`
+* **It is recommended** to use the compiled program, because it is now a C-level program and runs much faster. You can download the [release package](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip), extract it to anywhere, and run `nicsa\nicsa.exe`
 
   * You will need Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 installed ([Download here](https://aka.ms/vs/16/release/vc_redist.x64.exe)); otherwise, the system will prompt you that "vcruntime140.dll is missing." However, **it is very likeyly that you have already installed it** because a lot of other softwares depend on it
+* **\[Ad\] Alternatively, you can [download `CLab` here](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip), which includes `NICSA` but is more than `NICSA`!**
 * If you, **as a developer**, want to debug the source code and use **your own Python** environment, you can download the developers' package. It is no longer under maintenance since version 1.0.8. Although it is not recommended, if you would still like to do so, please refer to the documentation of [previous versions](https://github.com/Z-H-Sun/NICSA/tree/v1.07) ~~with an executable, `nicsa.exe`, served as "wrapper script", which enables the drag-drop function and prevents abrupt exit on error. You must make sure you have~~
 
   * ~~Python 2.7/3.4 or higher and with the following library~~
@@ -65,6 +73,7 @@ For \*nix systems (Mac OS X and Linux), if you have deployed a Python3 environme
 
 ## How to use
 ### Run the program
+* For Windows Version 1.081, you can run `CreateDesktopShortcuts.exe` first for more convenient usage;
 * For Windows and Mac OS X, double-click on the executable to run;
 
   * For Mac OS X, **make sure that the default application for executables is "Utilities → Terminal"**
@@ -128,6 +137,7 @@ For \*nix systems (Mac OS X and Linux), if you have deployed a Python3 environme
   * Now, for the Windows compiled package, you can find the configuration file alongside `nicsa.exe`
   * It is written in Python code;
   * Among them, **`COMMAND`, `FIGURE_SIZE`, and `COMPONENTS` are especially useful in that you may want to change the method/basis set for a NICS calculation or the default size of the window and the default visiblity of bonds, labels, atoms, etc.**
+  * The config file of the 1.08 version was written with some experimental functions. *If they mess things up, which are not likely, please delete those lines*;
 * If a .gjf has been read by the program, a `<filename>.nicsa` plain-text file will be generated for future convenience. You can edit this file using a text editor (like Notepad) to re-define the bonds and rings.
 
   * The `connectivity` list records the bonds between non-hydrogen atoms. Each tuple has two numbers defining which two atoms are bonded. Note that the number **is not the actual atom number**, but the number of non-H atoms without reckoning in hydrogens or ghost atoms, and you should start counting from zero instead of one;

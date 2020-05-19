@@ -7,6 +7,9 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 
 `NICS Automator` 可读取`.gjf`文件中的分子构型（构型优化结束后可由GaussView打开并存为`.gjf`文件）并自动生成用于NICS(0/1)计算的虚拟原子坐标及新的`.gjf`输入文件。
 
+## 广告
+* 最新发布 `CLab`，[点此下载](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)！它是 Windows 平台上的`NICSA`与[`FETAnal`](https://github.com/Z-H-Sun/FETAnal)两个模块的合集，其大小与单个模块相当，但可同时实现两者功能。
+
 ## 特性
 * 跨平台的Python程序，用户友好
 * 可视化，图形用户界面 (GUI) 显示分子结构
@@ -14,6 +17,10 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 * 自动生成虚拟原子 "Bq"
 
 ## 更新日志
+
+### 1.081 版（仅对 Windows 用户）
+* 优化用户界面
+* 现可双击`CreateDesktopShortcuts.exe`以自动创建带预设的桌面快捷方式，方便调用
 
 ### 1.08 版
 <p align="center"><img src="/screenshots/4.png" width="90%" height="90%"></p>
@@ -35,13 +42,14 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 * 提供关掉显示3D坐标轴和背景的选项，制图更明晰
 * 找环效率大幅提升（通过删除无向图中不必要的节点，例如氢原子肯定不会参与成环）
 
-## 运行环境
+## 运行环境 及 下载地址
 
 ### Windows
 * Windows 7 **64位** 或以上版本
-* **推荐** 使用编译版本，因其运行速度更快。下载此[发行包](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Win_Release.zip)，解压至任意路径并运行`nicsa\nicsa.exe`
+* **推荐** 使用编译版本，因其运行速度更快。下载此[发行包](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip)，解压至任意路径并运行`nicsa\nicsa.exe`
 
   * 需要安装 Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 ([下载](https://aka.ms/vs/16/release/vc_redist.x64.exe))，否则系统将提示“vcruntime140.dll缺失”。不过，**很有可能你之前已经安装过了**，因为不少软件都依赖此运行库
+* **【广告】或者，你可以[下载`CLab`](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)，其中包括了`NICSA`，但功能更强大！**
 * **如果你是开发者**，希望调试程序并使用**自己的Python环境**，则可下载开发者工具包。但是，自1.08版起不再维护且**不推荐使用**，如果需调试请参考[之前版本](https://github.com/Z-H-Sun/NICSA/tree/v1.07)
 
 ### Mac OS
@@ -62,8 +70,10 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 
 ## 用法简介
 * 详细用法参见英文说明文档（同时提供样例以参考）的[How to use](/README.md#how-to-use)一节
+* 针对Windows用户，高于1.081版本时可双击运行`CreateDesktopShortcuts.exe`以自动创建带预设的桌面快捷方式，方便调用
 * 针对Mac用户，**请确保打开方式为“实用工具-终端(Utilities-Terminal)”。如果从网上下载，系统 Gatekeeper 可能阻止程序运行，请到 系统偏好-安全与隐私-通用 中放行**
 * 根据注释更改配置文件 [nicsa.config](/nicsa.config)，特别是`COMMAND`和`FIGURE_SIZE`、`COMPONENTS`，前者表示生成的.gjf中希望指定哪个方法/基组进行计算，后两者指定了图形界面窗口大小及其中显示哪些组件（是否显示氢原子/标签/平面等）
+  * 1.08 版的配置文件中写有一些实验性功能。虽然不太可能发生，但若造成意外，请删除那几行的代码
 * 将（构型优化完的）目标分子的.gjf输入文件拖拽至应用程序（仅限Windows），或拖入终端窗口（各平台通用）并回车
   * 对于Windows编译版，可以将可执行文件创建桌面快捷方式以方便调用：这样可直接将输入文件拖至快捷方式上便可用该程序打开此输入文件
 * 将在一个独立的图形用户界面窗口中显示分子的初始结构（下图）<p align="center"><img src="/screenshots/1.png" width="60%" height="60%"></p>
