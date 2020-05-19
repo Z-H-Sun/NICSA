@@ -4,7 +4,10 @@
 Automatically creates an Gaussian input file eligible for NICS(0)/(1) calculations based on the initial .gjf file, which can be obtained by saving the optimized geometry using GaussView.
 
 ## Advertisement
-* Now a combined package of [`FETAnal`](https://github.com/Z-H-Sun/FETAnal) and `NICSA` on Windows, `CLab`, is released! **You can download [the latest release of CLab here](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip), which takes up about the same space as either of the modules but does both modules' job.**
+[![](https://img.shields.io/badge/Download%20at%20GitHub-CLab%20for%20Windows-important?style=for-the-badge&logo=github)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)|[![](https://img.shields.io/badge/Download%20at%20BaiduPan-Passcode:%20csme-informational?style=for-the-badge&logo=google-cloud)](https://pan.baidu.com/s/1QjKGhEvYMKCmh4mWc1mJIg)
+---|---
+
+* Now a combined package of [`FETAnal`](https://github.com/Z-H-Sun/FETAnal) and `NICSA` on Windows, `CLab`, is released! **It takes up about the same space as either of the modules but does both modules' job.** Click the button above to download
 
 ## Features
 * A cross-platform python program
@@ -42,12 +45,13 @@ Automatically creates an Gaussian input file eligible for NICS(0)/(1) calculatio
 ## Runtime Environment and Download Links
 The requirements listed below are recommended for running this program. If not met, however, workarounds are also provided here.
 
-### For Windows
+### For Windows [![](https://img.shields.io/badge/Download%20for%20Windows-NICSA%20Ver%201.081-0078d6?style=plastic&logo=windows)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip)
 * Windows 7 **64-bit OS** or higher
 * **It is recommended** to use the compiled program, because it is now a C-level program and runs much faster. You can download the [release package](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip), extract it to anywhere, and run `nicsa\nicsa.exe`
 
-  * You will need Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 installed ([Download here](https://aka.ms/vs/16/release/vc_redist.x64.exe)); otherwise, the system will prompt you that "vcruntime140.dll is missing." However, **it is very likeyly that you have already installed it** because a lot of other softwares depend on it
-* **\[Ad\] Alternatively, you can [download `CLab` here](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip), which includes `NICSA` but is more than `NICSA`!**
+  * You will need Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 installed ([![](https://img.shields.io/badge/Download-VCRedist-00599c?style=plastic&logo=c%2B%2B)](https://aka.ms/vs/16/release/vc_redist.x64.exe)); otherwise, the system will prompt you that "vcruntime140.dll is missing." However, **it is very likeyly that you have already installed it** because a lot of other softwares depend on it
+* **\[Ad\] Alternatively, you can download `CLab`, which includes `NICSA` but is more than `NICSA`!** [![](https://img.shields.io/badge/Download%20for%20Windows-CLab%20%28with%20NICSA%29-0078d6?style=plastic&logo=windows)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)
+
 * If you, **as a developer**, want to debug the source code and use **your own Python** environment, you can download the developers' package. It is no longer under maintenance since version 1.0.8. Although it is not recommended, if you would still like to do so, please refer to the documentation of [previous versions](https://github.com/Z-H-Sun/NICSA/tree/v1.07) ~~with an executable, `nicsa.exe`, served as "wrapper script", which enables the drag-drop function and prevents abrupt exit on error. You must make sure you have~~
 
   * ~~Python 2.7/3.4 or higher and with the following library~~
@@ -55,12 +59,12 @@ The requirements listed below are recommended for running this program. If not m
     * ~~Matplotlib >= 1.3 **with mpl_toolkits** and their dependencies (If you do not have the `matplotlib` library, you can run `pip install matplotlib` in `cmd`; or, if the one you have does not include `mpl_toolkits` extension, try `pip install -U matplotlib`)~~
   * ~~No VC runtime library required~~
 
-### For Mac OS
+### For Mac OS [![](https://img.shields.io/badge/Download%20for%20Mac%20OS%20X-NICSA%20Ver%201.08-999999?style=plastic&logo=apple)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Mac.zip)
 * Mac OS X 10.10 or higher
 
 Fortunately, Python 2.7 with Matplotlib 1.3 was built-in to Mac OS X. However, the library lacks `mpl_toolkits` extension, and thus it should be set up additionally; **Or, if you do not want to deal with those `pip` stuff, we provide [this package](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Mac.zip) with matplotlib.mpl_toolkits 1.3.0 integrated** \(which was extracted from official website [PyPI.org](https://pypi.org/project/matplotlib/1.3.0/)\).
 
-### For Linux
+### For Linux [![](https://img.shields.io/badge/Git%20Clone%20for%20Linux-NICSA%20Ver%201.08-e95420?style=plastic&logo=ubuntu)](https://github.com/Z-H-Sun/NICSA.git)
 * Must be with a desktop environment to display GUI
 * Python >= 2.7 with
 

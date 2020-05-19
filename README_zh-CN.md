@@ -8,7 +8,9 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 `NICS Automator` 可读取`.gjf`文件中的分子构型（构型优化结束后可由GaussView打开并存为`.gjf`文件）并自动生成用于NICS(0/1)计算的虚拟原子坐标及新的`.gjf`输入文件。
 
 ## 广告
-* 最新发布 `CLab`，[点此下载](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)！它是 Windows 平台上的`NICSA`与[`FETAnal`](https://github.com/Z-H-Sun/FETAnal)两个模块的合集，其大小与单个模块相当，但可同时实现两者功能。
+[![](https://img.shields.io/badge/下载自GitHub-CLab%20for%20Windows-important?style=for-the-badge&logo=github)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)|[![](https://img.shields.io/badge/下载自百度云-提取码：csme-informational?style=for-the-badge&logo=google-cloud)](https://pan.baidu.com/s/1QjKGhEvYMKCmh4mWc1mJIg)
+---|---
+* 最新发布 `CLab`，点击上方按钮下载！**它是 Windows 平台上的`NICSA`与[`FETAnal`](https://github.com/Z-H-Sun/FETAnal)两个模块的合集，其大小与单个模块相当，但可同时实现两者功能。**
 
 ## 特性
 * 跨平台的Python程序，用户友好
@@ -44,20 +46,20 @@ Gaussian可以计算NICS(0)和/或NICS(1)（本质上就是计算磁屏蔽值）
 
 ## 运行环境 及 下载地址
 
-### Windows
+### Windows [![](https://img.shields.io/badge/Windows版下载-NICSA%20Ver%201.081-0078d6?style=plastic&logo=windows)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip)
 * Windows 7 **64位** 或以上版本
 * **推荐** 使用编译版本，因其运行速度更快。下载此[发行包](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/NICSA_1.081_Win_Release.zip)，解压至任意路径并运行`nicsa\nicsa.exe`
 
-  * 需要安装 Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 ([下载](https://aka.ms/vs/16/release/vc_redist.x64.exe))，否则系统将提示“vcruntime140.dll缺失”。不过，**很有可能你之前已经安装过了**，因为不少软件都依赖此运行库
-* **【广告】或者，你可以[下载`CLab`](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)，其中包括了`NICSA`，但功能更强大！**
+  * 需要安装 Microsoft Visual C++ Redistributable for Visual Studio 2015-2019 ([![](https://img.shields.io/badge/下载-VC运行时库-00599c?style=plastic&logo=c%2B%2B)](https://aka.ms/vs/16/release/vc_redist.x64.exe))，否则系统将提示“vcruntime140.dll缺失”。不过，**很有可能你之前已经安装过了**，因为不少软件都依赖此运行库
+* **【广告】或者，你可以下载`CLab`，其中包括了`NICSA`，但功能更强大！** [![](https://img.shields.io/badge/Windows版下载-CLab%20%28含%20NICSA%29-0078d6?style=plastic&logo=windows)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.081/CLab_Win_Release.NICSA_1.081%2BFETAnal_1.041.zip)
 * **如果你是开发者**，希望调试程序并使用**自己的Python环境**，则可下载开发者工具包。但是，自1.08版起不再维护且**不推荐使用**，如果需调试请参考[之前版本](https://github.com/Z-H-Sun/NICSA/tree/v1.07)
 
-### Mac OS
+### Mac OS [![](https://img.shields.io/badge/Mac%20OS%20X版下载-NICSA%20Ver%201.08-999999?style=plastic&logo=apple)](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Mac.zip)
 * Mac OS X 10.10 或更高版本
 
 好消息是，系统自带 Python 2.7（含 Matplotlib 1.3）；坏消息是，后者没有`mpl_toolkits`扩展。你可以选择自行安装， **或者，可以选择下载[这个](https://github.com/Z-H-Sun/NICSA/releases/download/v1.08/NICSA_1.08_Mac.zip)集成有 matplotlib.mpl_toolkits 1.3.0 的包** （该扩展是由官网 [PyPI.org](https://pypi.org/project/matplotlib/1.3.0/) 获得的）
 
-### Linux
+### Linux [![](https://img.shields.io/badge/Linux%20克隆该库-NICSA%20Ver%201.08-e95420?style=plastic&logo=ubuntu)](https://github.com/Z-H-Sun/NICSA.git)
 * 需有桌面环境以显示 GUI
 * Python >= 2.7 含
 
